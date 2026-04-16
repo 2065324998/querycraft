@@ -138,3 +138,18 @@ class TestCompoundCompilation:
         assert limit_idx > union_idx, (
             f"LIMIT should follow UNION in SQL output. Got: {sql}"
         )
+
+    def test_from_subquery_param_order(self):
+        """FROM subquery params should precede outer WHERE params."""
+        inner = (QueryBuilder("orders")
+            .select("user_id")
+            .where("total", ">", 500))
+        query = (QueryBuilder()
+            .select("user_id")
+            .from_subquery(inner, alias="o")
+            .where("o.user_id", "<", 100))
+        sql, params = query.compile()
+        assert params == (500, 100), (
+            f"Subquery params should come before outer params. "
+            f"Expected (500, 100), got {params}"
+        )
