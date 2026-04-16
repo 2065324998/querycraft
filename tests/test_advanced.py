@@ -126,3 +126,15 @@ class TestCompoundCompilation:
         left.union(right)
         sql, params = left.compile()
         assert params == ()
+
+    def test_compound_limit_sql_structure(self):
+        """LIMIT on a compound query should appear after the UNION clause."""
+        left = QueryBuilder("t1").select("a").where("x", "=", 1)
+        right = QueryBuilder("t2").select("a")
+        left.union(right).limit(5)
+        sql, params = left.compile()
+        union_idx = sql.index("UNION")
+        limit_idx = sql.index("LIMIT")
+        assert limit_idx > union_idx, (
+            f"LIMIT should follow UNION in SQL output. Got: {sql}"
+        )
