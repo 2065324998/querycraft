@@ -127,16 +127,35 @@ class TestCompoundCompilation:
         sql, params = left.compile()
         assert params == ()
 
-    def test_compound_limit_sql_structure(self):
-        """LIMIT on a compound query should appear after the UNION clause."""
+    def test_compound_clause_ordering(self):
+        """ORDER BY and LIMIT should appear after the UNION clause."""
         left = QueryBuilder("t1").select("a").where("x", "=", 1)
         right = QueryBuilder("t2").select("a")
-        left.union(right).limit(5)
+        left.union(right).order_by("a").limit(5)
         sql, params = left.compile()
         union_idx = sql.index("UNION")
+        order_idx = sql.index("ORDER BY")
         limit_idx = sql.index("LIMIT")
+        assert order_idx > union_idx, (
+            f"ORDER BY should follow UNION. Got: {sql}"
+        )
         assert limit_idx > union_idx, (
-            f"LIMIT should follow UNION in SQL output. Got: {sql}"
+            f"LIMIT should follow UNION. Got: {sql}"
+        )
+
+    def test_select_function_param_count(self):
+        """SELECT with parameterized function should include all params."""
+        from querycraft.expressions import FunctionCall, Column, Literal
+        query = (QueryBuilder("orders")
+            .select(
+                FunctionCall("COALESCE", args=[Column("discount"), Literal(0)])
+            )
+            .where("status", "=", "active"))
+        sql, params = query.compile()
+        assert "COALESCE(discount, ?)" in sql
+        assert len(params) == 2, (
+            f"Expected 2 params (SELECT literal + WHERE literal), "
+            f"got {len(params)}: {params}"
         )
 
     def test_from_subquery_param_order(self):
