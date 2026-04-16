@@ -98,15 +98,6 @@ class Compiler:
             conditions = [self._render_expr(c) for c in query.havings]
             parts.append(f"HAVING {' AND '.join(conditions)}")
 
-        # Compound query (UNION/INTERSECT/EXCEPT)
-        if query.compound_op:
-            op = query.compound_op
-            if query.compound_all:
-                op += " ALL"
-            right_sql = self._render_select(query.compound_right)
-            parts.append(op)
-            parts.append(right_sql)
-
         # ORDER BY
         if query.order_by:
             items = [f"{item.column} {item.direction}" for item in query.order_by]
@@ -117,6 +108,15 @@ class Compiler:
             parts.append(f"LIMIT {self.placeholder}")
         if query.offset is not None:
             parts.append(f"OFFSET {self.placeholder}")
+
+        # Compound query (UNION/INTERSECT/EXCEPT)
+        if query.compound_op:
+            op = query.compound_op
+            if query.compound_all:
+                op += " ALL"
+            right_sql = self._render_select(query.compound_right)
+            parts.append(op)
+            parts.append(right_sql)
 
         return " ".join(parts)
 
