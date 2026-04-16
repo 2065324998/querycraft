@@ -7,7 +7,7 @@ from querycraft.expressions import (
     InExpression, ExistsExpression, BetweenExpression,
     IsNullExpression, FunctionCall, Star,
 )
-from querycraft.nodes import Query, Join, OrderByItem
+from querycraft.nodes import Query, Join, OrderByItem, CTE
 
 __version__ = "0.1.0"
 
@@ -16,5 +16,5 @@ __all__ = [
     "Column", "Literal", "RawSQL", "Comparison", "LogicalOp",
     "InExpression", "ExistsExpression", "BetweenExpression",
     "IsNullExpression", "FunctionCall", "Star",
-    "Query", "Join", "OrderByItem",
+    "Query", "Join", "OrderByItem", "CTE",
 ]

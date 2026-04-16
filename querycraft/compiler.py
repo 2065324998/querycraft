@@ -53,13 +53,23 @@ class Compiler:
         """Render a SELECT query to a SQL string."""
         parts = []
 
+        # CTE clause (WITH)
+        if query.ctes:
+            cte_defs = []
+            for cte in query.ctes:
+                cte_sql = self._render_select(cte.query)
+                cte_defs.append(f"{cte.name} AS ({cte_sql})")
+            has_recursive = any(c.recursive for c in query.ctes)
+            keyword = "WITH RECURSIVE" if has_recursive else "WITH"
+            parts.append(f"{keyword} {', '.join(cte_defs)}")
+
         # SELECT clause
-        keyword = "SELECT DISTINCT" if query.distinct else "SELECT"
+        select_kw = "SELECT DISTINCT" if query.distinct else "SELECT"
         if not query.select_columns:
-            parts.append(f"{keyword} *")
+            parts.append(f"{select_kw} *")
         else:
             cols = [self._render_expr(col) for col in query.select_columns]
-            parts.append(f"{keyword} {', '.join(cols)}")
+            parts.append(f"{select_kw} {', '.join(cols)}")
 
         # FROM clause
         if query.from_subquery:
@@ -87,6 +97,15 @@ class Compiler:
         if query.havings:
             conditions = [self._render_expr(c) for c in query.havings]
             parts.append(f"HAVING {' AND '.join(conditions)}")
+
+        # Compound query (UNION/INTERSECT/EXCEPT)
+        if query.compound_op:
+            op = query.compound_op
+            if query.compound_all:
+                op += " ALL"
+            right_sql = self._render_select(query.compound_right)
+            parts.append(op)
+            parts.append(right_sql)
 
         # ORDER BY
         if query.order_by:
@@ -223,6 +242,10 @@ class Compiler:
         # Phase 2: Collect parameters from all subqueries
         for subquery in self._find_all_subqueries(query):
             params.extend(self._collect_select_params(subquery))
+
+        # Compound query parameters
+        if query.compound_right:
+            params.extend(self._collect_select_params(query.compound_right))
 
         return params
 

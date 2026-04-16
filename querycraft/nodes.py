@@ -5,6 +5,14 @@ from typing import Optional
 
 
 @dataclass
+class CTE:
+    """A Common Table Expression (WITH clause)."""
+    name: str
+    query: Optional['Query'] = None
+    recursive: bool = False
+
+
+@dataclass
 class Query:
     """Represents a complete SQL query."""
     select_columns: list = field(default_factory=list)
@@ -20,6 +28,14 @@ class Query:
     offset: Optional[int] = None
     distinct: bool = False
     query_type: str = "select"
+
+    # CTE fields
+    ctes: list = field(default_factory=list)
+
+    # Compound query fields (UNION/INTERSECT/EXCEPT)
+    compound_op: Optional[str] = None
+    compound_right: Optional['Query'] = None
+    compound_all: bool = False
 
     # INSERT fields
     insert_table: Optional[str] = None

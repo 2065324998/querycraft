@@ -1,6 +1,6 @@
 """Fluent query builder API for constructing SQL queries."""
 
-from querycraft.nodes import Query, Join, OrderByItem
+from querycraft.nodes import Query, Join, OrderByItem, CTE
 from querycraft.expressions import (
     Column, Literal, RawSQL, Star, Comparison, LogicalOp,
     InExpression, ExistsExpression, BetweenExpression,
@@ -214,6 +214,53 @@ class QueryBuilder:
     def set(self, column, value):
         """Add a SET clause for UPDATE."""
         self._query.update_sets.append((column, value))
+        return self
+
+    def with_cte(self, name, subquery, recursive=False):
+        """Add a CTE (WITH clause).
+
+        Args:
+            name: CTE name used to reference it in the main query
+            subquery: QueryBuilder or Query defining the CTE body
+            recursive: whether this is a RECURSIVE CTE
+        """
+        if isinstance(subquery, QueryBuilder):
+            cte_query = subquery.build()
+        else:
+            cte_query = subquery
+        self._query.ctes.append(
+            CTE(name=name, query=cte_query, recursive=recursive)
+        )
+        return self
+
+    def union(self, other, all=False):
+        """Combine with another query using UNION."""
+        self._query.compound_op = "UNION"
+        self._query.compound_all = all
+        if isinstance(other, QueryBuilder):
+            self._query.compound_right = other.build()
+        else:
+            self._query.compound_right = other
+        return self
+
+    def intersect(self, other, all=False):
+        """Combine with another query using INTERSECT."""
+        self._query.compound_op = "INTERSECT"
+        self._query.compound_all = all
+        if isinstance(other, QueryBuilder):
+            self._query.compound_right = other.build()
+        else:
+            self._query.compound_right = other
+        return self
+
+    def except_(self, other, all=False):
+        """Combine with another query using EXCEPT."""
+        self._query.compound_op = "EXCEPT"
+        self._query.compound_all = all
+        if isinstance(other, QueryBuilder):
+            self._query.compound_right = other.build()
+        else:
+            self._query.compound_right = other
         return self
 
     def build(self):
